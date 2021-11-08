@@ -16,6 +16,7 @@ import FavoriteIcon from '@material-ui/icons/Favorite'
 import PauseIcon from '@material-ui/icons/Pause'
 import AddIcon from '@material-ui/icons/Add'
 import PublishIcon from '@material-ui/icons/Publish'
+import { ConsoleLogger } from '@aws-amplify/core';
 
 Amplify.configure(awsConfig)
 
@@ -148,28 +149,41 @@ export default withAuthenticator(App);
 
 const AddSong = ({ onUpload }) => {
 
+  const [songData, setSongData] = useState({});
+
+
+
   const uploadSong = () => {
+
     // Upload the song
+    console.log('songData',songData);
     onUpload();
   }
 
 
   return (
     <>
-    <div className="newSong">
-      <TextField
-        label="Title"
-      />
-      <TextField
-        label="Artist"
-      />
-      <TextField
-        label="Description"
-      />
-      <IconButton onClick={uploadSong}>
-        <PublishIcon />
-      </IconButton>
-    </div>
+      <div className="newSong">
+        <TextField
+          label="Title" 
+          value={songData.title} 
+          onChange={e => setSongData({ ...songData, tilte: e.target.value })}
+          />
+        <TextField
+          label="Artist"
+          value={songData.owner} 
+          onChange={e => setSongData({ ...songData, owner: e.target.value })}
+        />
+        <TextField
+          label="Description"
+          value={songData.description}
+          onChange={e => setSongData({...songData,description:e.target.value})}
+        />
+        <input type="file" accept="audio/mp3" onChange={e => setMp3Data(e.target.files[0])} />
+        <IconButton onClick={uploadSong}>
+          <PublishIcon />
+        </IconButton>
+      </div>
     </>
   )
 }
