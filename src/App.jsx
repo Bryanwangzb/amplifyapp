@@ -1,54 +1,57 @@
 import logo from './logo.svg';
 import './App.css';
 import { AmplifySignOut, withAuthenticator } from '@aws-amplify/ui-react';
-import Amplify, { API,Storage } from 'aws-amplify'
+import Amplify, { API, Storage } from 'aws-amplify'
 import awsConfig from './aws-exports'
 import { listSongs } from './graphql/queries'
-import {updateSong, updateSongs} from './graphql/mutations'
+import { updateSong, updateSongs } from './graphql/mutations'
 import { useState } from 'react'
 import { useEffect } from 'react'
 
 import ReactPlayer from 'react-player'
-import { graphqlOperation} from '@aws-amplify/api'
-import { Paper,IconButton } from '@material-ui/core'
+import { graphqlOperation } from '@aws-amplify/api'
+import { Paper, IconButton, TextField } from '@material-ui/core'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import FavoriteIcon from '@material-ui/icons/Favorite'
 import PauseIcon from '@material-ui/icons/Pause'
+import AddIcon from '@material-ui/icons/Add'
+import PublishIcon from '@material-ui/icons/Publish'
 
 Amplify.configure(awsConfig)
 
 function App() {
 
   const [songs, setSongs] = useState([])
-  const [songPlaying,setSongPlaying] = useState('')
-  const [audioURL,setAudioURL] = useState('')
+  const [songPlaying, setSongPlaying] = useState('')
+  const [audioURL, setAudioURL] = useState('')
+  const [showAddSong, setShowAddNewSong] = useState(false)
 
   useEffect(() => {
     fetchSongs()
   }, [])
 
-  const toggleSong = async (idx) =>{ 
-    if(songPlaying === idx){
+  const toggleSong = async (idx) => {
+    if (songPlaying === idx) {
       setSongPlaying('')
-      return 
+      return
     }
 
     const songFilePath = songs[idx].filePath;
     try {
-        const fileAccessURL = await Storage.get(songFilePath,{expires: 60})
-        console.log('access url',fileAccessURL)
-        setSongPlaying(idx);
-        setAudioURL(fileAccessURL)
-        return;
+      const fileAccessURL = await Storage.get(songFilePath, { expires: 60 })
+      console.log('access url', fileAccessURL)
+      setSongPlaying(idx);
+      setAudioURL(fileAccessURL)
+      return;
     } catch (error) {
-        console.error('error accessing the file from S3',error)
-        setAudioURL('');
-        setSongPlaying('');
+      console.error('error accessing the file from S3', error)
+      setAudioURL('');
+      setSongPlaying('');
     }
 
 
 
-  
+
   }
 
   const fetchSongs = async () => {
@@ -64,20 +67,20 @@ function App() {
   };
 
 
-  const addLike = async(idx) =>{
+  const addLike = async (idx) => {
     try {
-        const song = songs[idx];
-        song.like = song.like + 1;
-        delete song.createdAt;
-        delete song.updatedAt;
+      const song = songs[idx];
+      song.like = song.like + 1;
+      delete song.createdAt;
+      delete song.updatedAt;
 
-        const songData = await API.graphql(graphqlOperation(updateSong,{input: song}));
-        const songList = [...songs];
-        songList[idx] = songData.data.updateSong;
-        setSongs(songList);
+      const songData = await API.graphql(graphqlOperation(updateSong, { input: song }));
+      const songList = [...songs];
+      songList[idx] = songData.data.updateSong;
+      setSongs(songList);
 
     } catch (error) {
-      console.log('error on adding like to song',error)
+      console.log('error on adding like to song', error)
     }
   }
 
@@ -88,7 +91,7 @@ function App() {
         <h2>Kozipro App</h2>
       </header>
       <div className="songList">
-        {songs.map((song,idx) => {
+        {songs.map((song, idx) => {
           return (
             <Paper variant="outlined" elevation={2} key={`song${idx}`}>
               <div className="songCard">
@@ -100,18 +103,18 @@ function App() {
                   <div className="songOwner">{song.owner}</div>
                 </div>
                 <div>
-                <IconButton aria-label="like" onClick={()=> addLike(idx)}>
-                  <FavoriteIcon />
-                </IconButton>
-                {song.like}
+                  <IconButton aria-label="like" onClick={() => addLike(idx)}>
+                    <FavoriteIcon />
+                  </IconButton>
+                  {song.like}
                 </div>
                 <div className="songDescription">{song.description}</div>
               </div>
               {
                 songPlaying === idx ? (
                   <div className='ourAudioPlayer'>
-                    <ReactPlayer 
-                      url = {audioURL}
+                    <ReactPlayer
+                      url={audioURL}
                       controls
                       playing
                       height="50px"
@@ -124,9 +127,49 @@ function App() {
             </Paper>
           )
         })}
+        {
+          showAddSong ? (
+            <AddSong onUpload={() => {
+              setShowAddNewSong(false)
+              fetchSongs()
+            }
+            } />
+          ) : <IconButton onClick={() => setShowAddNewSong(true)}>
+            <AddIcon />
+          </IconButton>
+        }
       </div>
     </div>
   );
 }
 
 export default withAuthenticator(App);
+
+
+const AddSong = ({ onUpload }) => {
+
+  const uploadSong = () => {
+    // Upload the song
+    onUpload();
+  }
+
+
+  return (
+    <>
+    <div className="newSong">
+      <TextField
+        label="Title"
+      />
+      <TextField
+        label="Artist"
+      />
+      <TextField
+        label="Description"
+      />
+      <IconButton onClick={uploadSong}>
+        <PublishIcon />
+      </IconButton>
+    </div>
+    </>
+  )
+}
