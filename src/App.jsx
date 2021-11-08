@@ -1,13 +1,15 @@
 import logo from './logo.svg';
 import './App.css';
 import { AmplifySignOut, withAuthenticator } from '@aws-amplify/ui-react';
-import Amplify, { API } from 'aws-amplify'
+import Amplify, { API,Storage } from 'aws-amplify'
 import awsConfig from './aws-exports'
 import { listSongs } from './graphql/queries'
 import {updateSong, updateSongs} from './graphql/mutations'
 import { useState } from 'react'
 import { useEffect } from 'react'
-import { graphqlOperation } from '@aws-amplify/api'
+
+import ReactPlayer from 'react-player'
+import { graphqlOperation} from '@aws-amplify/api'
 import { Paper,IconButton } from '@material-ui/core'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import FavoriteIcon from '@material-ui/icons/Favorite'
@@ -19,6 +21,7 @@ function App() {
 
   const [songs, setSongs] = useState([])
   const [songPlaying,setSongPlaying] = useState('')
+  const [audioURL,setAudioURL] = useState('')
 
   useEffect(() => {
     fetchSongs()
@@ -30,8 +33,22 @@ function App() {
       return 
     }
 
-    setSongPlaying(idx)
-    return
+    const songFilePath = songs[idx].filePath;
+    try {
+        const fileAccessURL = await Storage.get(songFilePath,{expires: 60})
+        console.log('access url',fileAccessURL)
+        setSongPlaying(idx);
+        setAudioURL(fileAccessURL)
+        return;
+    } catch (error) {
+        console.error('error accessing the file from S3',error)
+        setAudioURL('');
+        setSongPlaying('');
+    }
+
+
+
+  
   }
 
   const fetchSongs = async () => {
@@ -40,7 +57,6 @@ function App() {
       const songList = songData.data.listSongs.items
       console.log('song list', songList)
       setSongs(songList)
-
 
     } catch (error) {
       console.log("error on fetching songs:", error)
@@ -91,6 +107,20 @@ function App() {
                 </div>
                 <div className="songDescription">{song.description}</div>
               </div>
+              {
+                songPlaying === idx ? (
+                  <div className='ourAudioPlayer'>
+                    <ReactPlayer 
+                      url = {audioURL}
+                      controls
+                      playing
+                      height="50px"
+                      onPause={() => toggleSong(idx)}
+                    />
+
+                  </div>
+                ) : null
+              }
             </Paper>
           )
         })}
